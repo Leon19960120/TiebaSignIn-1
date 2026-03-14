@@ -11,7 +11,11 @@ jobs:
 
     steps:
       - name: Checkout code
+<<<<<<< HEAD
         uses: actions/checkout@v5
+=======
+        uses: actions/checkout@v6
+>>>>>>> upstream/master
 
       - name: Set up Java
         uses: actions/setup-java@v5
