@@ -41,11 +41,11 @@ public class Run {
     /**
      * 获取用户的tbs（修改：HTTP→HTTPS）
      */
-    String TBS_URL = "https://tieba.baidu.com/dc/common/tbs";
+    String TBS_URL = "http://tieba.baidu.com/dc/common/tbs";
     /**
      * 贴吧签到接口（修改：HTTP→HTTPS，核心修复连接拒绝）
      */
-    String SIGN_URL = "https://c.tieba.baidu.com/c/c/forum/sign";
+    String SIGN_URL = "http://c.tieba.baidu.com/c/c/forum/sign";
 
     /**
      * 存储用户所关注的贴吧
