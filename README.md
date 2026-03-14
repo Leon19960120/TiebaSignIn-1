@@ -7,6 +7,9 @@
 <img src="https://img.shields.io/github/languages/code-size/srcrs/TiebaSignIn?color=blueviolet">
 </div>
 
+将 actions/checkout@v4 和 actions/setup-java@v4 升级到 v5，
+这是更长期、更彻底的解决方案（v5 版本原生基于 Node.js 24 构建，不会再触发 Node.js 20 弃用警告），且对你的贴吧签到场景完全兼容，无破坏性变更。
+
 # 简介
 
 用的是手机端的接口，签到经验更多，用户只需要填写`BDUSS`即可，每日自动帮你签到，最多支持`200`个贴吧签到。
