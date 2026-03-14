@@ -39,11 +39,11 @@ public class Run {
      */
     String LIKE_URL = "https://tieba.baidu.com/mo/q/newmoindex";
     /**
-     * 获取用户的tbs（修改：HTTP→HTTPS）
+     * 获取用户的tbs
      */
     String TBS_URL = "http://tieba.baidu.com/dc/common/tbs";
     /**
-     * 贴吧签到接口（修改：HTTP→HTTPS，核心修复连接拒绝）
+     * 贴吧签到接口
      */
     String SIGN_URL = "http://c.tieba.baidu.com/c/c/forum/sign";
 
