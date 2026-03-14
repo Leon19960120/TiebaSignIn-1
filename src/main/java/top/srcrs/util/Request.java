@@ -8,7 +8,6 @@ import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
@@ -20,7 +19,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 /**
- * 封装的网络请求请求工具类
+ * 封装的网络请求工具类
  *
  * @author srcrs
  * @Time 2020-10-31
@@ -38,8 +37,6 @@ public class Request {
     private Request() {
     }
 
-    ;
-
     /**
      * 发送get请求
      *
@@ -49,8 +46,12 @@ public class Request {
      * @Time 2020-10-31
      */
     public static JSONObject get(String url) {
-        RequestConfig defaultConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build();
-        HttpClient client = HttpClients.custom().setDefaultRequestConfig(defaultConfig).build();
+        RequestConfig defaultConfig = RequestConfig.custom()
+                .setCookieSpec(CookieSpecs.STANDARD)
+                .build();
+        HttpClient client = HttpClients.custom()
+                .setDefaultRequestConfig(defaultConfig)
+                .build();
 
         HttpGet httpGet = new HttpGet(url);
         httpGet.addHeader("connection", "keep-alive");
@@ -58,22 +59,25 @@ public class Request {
         httpGet.addHeader("charset", "UTF-8");
         httpGet.addHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36");
         httpGet.addHeader("Cookie", cookie.getCookie());
-        HttpResponse resp = null;
+        
         String respContent = null;
         try {
-            resp = client.execute(httpGet);
-            HttpEntity entity = null;
+            HttpResponse resp = client.execute(httpGet);
             if (resp.getStatusLine().getStatusCode() < 400) {
-                entity = resp.getEntity();
+                HttpEntity entity = resp.getEntity();
+                respContent = EntityUtils.toString(entity, "UTF-8");
             } else {
-                entity = resp.getEntity();
+                LOGGER.warn("HTTP状态码异常: {}", resp.getStatusLine().getStatusCode());
+                return null;
             }
-            respContent = EntityUtils.toString(entity, "UTF-8");
         } catch (Exception e) {
-            LOGGER.info("get请求错误 -- " + e);
+            LOGGER.error("GET请求错误", e);
+            return null;
         } finally {
-            return JSONObject.parseObject(respContent);
+            httpGet.releaseConnection();  // 释放连接
         }
+        
+        return respContent != null ? JSONObject.parseObject(respContent) : null;
     }
 
     /**
@@ -87,8 +91,13 @@ public class Request {
      */
     public static JSONObject post(String url, String body) {
         StringEntity entityBody = new StringEntity(body, "UTF-8");
-        RequestConfig defaultConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build();
-        HttpClient client = HttpClients.custom().setDefaultRequestConfig(defaultConfig).build();
+        RequestConfig defaultConfig = RequestConfig.custom()
+                .setCookieSpec(CookieSpecs.STANDARD)
+                .build();
+        HttpClient client = HttpClients.custom()
+                .setDefaultRequestConfig(defaultConfig)
+                .build();
+        
         HttpPost httpPost = new HttpPost(url);
         httpPost.addHeader("connection", "keep-alive");
         httpPost.addHeader("Host", "tieba.baidu.com");
@@ -97,22 +106,25 @@ public class Request {
         httpPost.addHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36");
         httpPost.addHeader("Cookie", cookie.getCookie());
         httpPost.setEntity(entityBody);
-        HttpResponse resp = null;
+        
         String respContent = null;
         try {
-            resp = client.execute(httpPost);
-            HttpEntity entity = null;
+            HttpResponse resp = client.execute(httpPost);
             if (resp.getStatusLine().getStatusCode() < 400) {
-                entity = resp.getEntity();
+                HttpEntity entity = resp.getEntity();
+                respContent = EntityUtils.toString(entity, "UTF-8");
             } else {
-                entity = resp.getEntity();
+                LOGGER.warn("HTTP状态码异常: {}", resp.getStatusLine().getStatusCode());
+                return null;
             }
-            respContent = EntityUtils.toString(entity, "UTF-8");
         } catch (Exception e) {
-            LOGGER.info("post请求错误 -- " + e);
+            LOGGER.error("POST请求错误", e);
+            return null;
         } finally {
-            return JSONObject.parseObject(respContent);
+            httpPost.releaseConnection();  // 释放连接
         }
+        
+        return respContent != null ? JSONObject.parseObject(respContent) : null;
     }
 
     /**
@@ -123,33 +135,40 @@ public class Request {
      * @Date 2023-02-27
      */
     public static Boolean isTiebaNotExist(String name) throws Exception {
-
         String url = "https://tieba.baidu.com/f?ie=utf-8&kw=" + name + "&fr=search";
-        RequestConfig defaultConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build();
-        HttpClient client = HttpClients.custom().setDefaultRequestConfig(defaultConfig).build();
+        RequestConfig defaultConfig = RequestConfig.custom()
+                .setCookieSpec(CookieSpecs.STANDARD)
+                .build();
+        HttpClient client = HttpClients.custom()
+                .setDefaultRequestConfig(defaultConfig)
+                .build();
+        
         HttpGet request = new HttpGet(url);
-
         request.addHeader("connection", "keep-alive");
         request.addHeader("Content-Type", "text/html; charset=UTF-8");
         request.addHeader("charset", "UTF-8");
         request.addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36 Edg/110.0.1587.57");
 
-        HttpResponse response = client.execute(request);
-        BufferedReader rd = new BufferedReader(
-                new InputStreamReader(response.getEntity().getContent()));
+        try {
+            HttpResponse response = client.execute(request);
+            BufferedReader rd = new BufferedReader(
+                    new InputStreamReader(response.getEntity().getContent()));
 
-        StringBuilder result = new StringBuilder();
-        String line = "";
-        while ((line = rd.readLine()) != null) {
-            result.append(line);
-        }
-        if(result.toString().contains("很抱歉，没有找到相关内容")){
-            LOGGER.info("{} 不存在",name);
-            return true;
-        } else {
-            LOGGER.info("{} 存在",name);
-            return false;
+            StringBuilder result = new StringBuilder();
+            String line;
+            while ((line = rd.readLine()) != null) {
+                result.append(line);
+            }
+            
+            if (result.toString().contains("很抱歉，没有找到相关内容")) {
+                LOGGER.info("{} 不存在", name);
+                return true;
+            } else {
+                LOGGER.info("{} 存在", name);
+                return false;
+            }
+        } finally {
+            request.releaseConnection();  // 释放连接
         }
     }
 }
-
