@@ -18,19 +18,6 @@
     <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
 
- 
-  <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>1.7.36</version>
-  </dependency>
-  <!-- Logback实现（SLF4J的推荐日志框架，轻量无依赖） -->
-  <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-      <version>1.2.11</version>
-  </dependency>
-
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
