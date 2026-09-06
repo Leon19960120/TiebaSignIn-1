@@ -55,11 +55,13 @@ def main() -> None:
         logger.warning("未获取到关注的贴吧，签到结束")
         return
 
-    # 3. 逐个签到 (带节流)
+    # 3. 逐个签到 (带节流与失败重试机制)
     total = len(forums)
-    logger.info(f"开始签到 {total} 个贴吧")
+    logger.info(f"开始第 1 轮签到，共 {total} 个贴吧")
 
     stats = {"success": 0, "exist": 0, "shield": 0, "error": 0}
+    failed_forums: list[dict] = []
+
     for idx, forum in enumerate(forums):
         # 节流: 随机间隔 1.0-2.5 秒
         delay = random.uniform(1.0, 2.5)
@@ -74,31 +76,82 @@ def main() -> None:
         fid = forum.get("id", "")
         fname = forum.get("name", "")
         result = client.sign_forum(fid, fname, tbs)
-        stats[result["status"]] += 1
+        status = result["status"]
+        stats[status] += 1
 
-        # 打印单条结果
         prefix = f"【{fname}】({idx + 1}/{total})"
-        if result["status"] == "success":
+        if status == "success":
             rank_str = f"，第 {result['rank']} 个签到" if result["rank"] else ""
             logger.info(f"{prefix} 签到成功{rank_str}")
-        elif result["status"] == "exist":
+        elif status == "exist":
             logger.info(f"{prefix} {result['message']}")
-        elif result["status"] == "shield":
+        elif status == "shield":
             logger.warning(f"{prefix} {result['message']}")
         else:
             logger.error(f"{prefix} 签到失败: {result['message']}")
+            failed_forums.append(forum)
 
-    # 4. 汇总
-    summary = (
-        f"\n========== 签到汇总 ==========\n"
-        f"贴吧总数: {total}\n"
-        f"签到成功: {stats['success']}\n"
-        f"已经签到: {stats['exist']}\n"
-        f"被屏蔽的: {stats['shield']}\n"
-        f"签到失败: {stats['error']}\n"
-        f"================================"
-    )
-    logger.info(summary)
+    # 4. 第二轮重试机制
+    final_failed_names: list[str] = []
+    if failed_forums:
+        retry_total = len(failed_forums)
+        logger.info(
+            f"\n===== 第 1 轮签到结束，共有 {retry_total} 个贴吧签到失败，"
+            f"等待 15 秒后开始第 2 轮重试 ====="
+        )
+        time.sleep(15)
+
+        # 尝试重新获取并刷新会话令牌 tbs
+        refreshed_tbs = client.get_tbs()
+        if refreshed_tbs:
+            tbs = refreshed_tbs
+            logger.info("已成功刷新 tbs 令牌")
+
+        for idx, forum in enumerate(failed_forums):
+            delay = random.uniform(1.5, 3.0)
+            time.sleep(delay)
+
+            if (idx + 1) % 10 == 0:
+                extra = random.uniform(5, 8)
+                logger.info(f"已重试 {idx + 1}/{retry_total} 个，休息 {extra:.1f}s ...")
+                time.sleep(extra)
+
+            fid = forum.get("id", "")
+            fname = forum.get("name", "")
+            result = client.sign_forum(fid, fname, tbs)
+            status = result["status"]
+            prefix = f"【{fname}】(重试 {idx + 1}/{retry_total})"
+
+            if status == "success":
+                stats["error"] -= 1
+                stats["success"] += 1
+                rank_str = f"，第 {result['rank']} 个签到" if result["rank"] else ""
+                logger.info(f"{prefix} 重试成功{rank_str}")
+            elif status == "exist":
+                stats["error"] -= 1
+                stats["exist"] += 1
+                logger.info(f"{prefix} 重试返回今日已签到")
+            elif status == "shield":
+                stats["error"] -= 1
+                stats["shield"] += 1
+                logger.warning(f"{prefix} 重试确认贴吧已被屏蔽")
+            else:
+                final_failed_names.append(fname)
+                logger.error(f"{prefix} 重试仍失败: {result['message']}")
+
+    # 5. 汇总
+    summary_lines = [
+        "\n========== 签到汇总 ==========",
+        f"贴吧总数: {total}",
+        f"签到成功: {stats['success']}",
+        f"已经签到: {stats['exist']}",
+        f"被屏蔽的: {stats['shield']}",
+        f"签到失败: {stats['error']}",
+    ]
+    if final_failed_names:
+        summary_lines.append(f"重试失败贴吧列表: {', '.join(final_failed_names)}")
+    summary_lines.append("================================")
+    logger.info("\n".join(summary_lines))
 
 
 if __name__ == "__main__":
